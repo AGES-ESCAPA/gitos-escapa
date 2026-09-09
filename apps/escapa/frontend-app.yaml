@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/SEU_ORG/gitops-escapa.git   # <-- ajustar
+    repoURL: https://github.com/AGES-ESCAPA/gitos-escapa.git
     targetRevision: main
     path: apps/escapa/frontend/overlays/prod
   destination:

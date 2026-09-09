@@ -7,5 +7,5 @@ replicas:
   - name: escapa-backend
     count: 3
 images:
-  - name: ghcr.io/SEU_ORG/escapa-backend
+  - name: ghcr.io/AGES-ESCAPA/escapa-backend
     newTag: stable

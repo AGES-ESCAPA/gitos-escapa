@@ -7,7 +7,7 @@ replicas:
   - name: escapa-frontend
     count: 3
 images:
-  - name: ghcr.io/SEU_ORG/escapa-frontend
+  - name: ghcr.io/AGES-ESCAPA/escapa-frontend
     newTag: stable
 patches:
   - target:
