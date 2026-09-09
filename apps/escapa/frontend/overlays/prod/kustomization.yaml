@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: escapa-prod
+resources:
+  - ../../base
+replicas:
+  - name: escapa-frontend
+    count: 3
+images:
+  - name: ghcr.io/SEU_ORG/escapa-frontend
+    newTag: stable
+patches:
+  - target:
+      kind: Deployment
+      name: escapa-frontend
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "https://api.SEU_DOMINIO"   # <-- mesmo valor de backend_subdomain.root_domain no Terraform

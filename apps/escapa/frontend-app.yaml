@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: escapa-frontend-prod
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/SEU_ORG/gitops-escapa.git   # <-- ajustar
+    targetRevision: main
+    path: apps/escapa/frontend/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: escapa-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

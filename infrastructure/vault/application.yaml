@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://helm.releases.hashicorp.com
+    chart: vault
+    targetRevision: "0.29.1"
+    helm:
+      releaseName: vault
+      values: |
+        server:
+          standalone:
+            enabled: true
+          dataStorage:
+            enabled: true
+            storageClass: local-path
+            size: 10Gi
+        injector:
+          enabled: true   # Vault Agent Injector p/ sidecars no backend
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

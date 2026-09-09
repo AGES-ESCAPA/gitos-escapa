@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: escapa-frontend
+  labels:
+    app: escapa-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: escapa-frontend
+  template:
+    metadata:
+      labels:
+        app: escapa-frontend
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret   # criado pelo Terraform (user_data), não pelo Git
+      containers:
+        - name: frontend
+          image: ghcr.io/SEU_ORG/escapa-frontend:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: "https://api.SEU_DOMINIO"   # sobrescrito por ambiente nos overlays
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15

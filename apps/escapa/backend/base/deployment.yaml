@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: escapa-backend
+  labels:
+    app: escapa-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: escapa-backend
+  template:
+    metadata:
+      labels:
+        app: escapa-backend
+      annotations:
+        # Vault Agent Injector: injeta segredos do Vault como arquivos no pod
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "escapa-backend"
+        vault.hashicorp.com/agent-inject-secret-db-creds: "secret/data/escapa/database"
+    spec:
+      serviceAccountName: escapa-backend
+      imagePullSecrets:
+        - name: ghcr-pull-secret   # criado pelo Terraform (user_data), não pelo Git
+      containers:
+        - name: backend
+          image: ghcr.io/SEU_ORG/escapa-backend:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_HOST
+              value: "escapa-database"
+            - name: MINIO_ENDPOINT
+              value: "http://minio.minio.svc.cluster.local:9000"
+            - name: MINIO_BUCKET_MATERIAIS
+              value: "escapa-materiais"
+            - name: MINIO_BUCKET_CERTIFICADOS
+              value: "escapa-certificados"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
