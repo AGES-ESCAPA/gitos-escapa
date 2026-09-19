@@ -13,20 +13,46 @@ spec:
       releaseName: loki
       values: |
         loki:
+          isDefault: false
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
           persistence:
             enabled: true
             storageClassName: local-path
-            size: 20Gi
+            size: 3Gi
+          config:
+            limits_config:
+              retention_period: 24h
+              ingestion_rate_mb: 1
+              ingestion_burst_size_mb: 2
+              max_query_parallelism: 2
+            compactor:
+              retention_enabled: true
+              retention_delete_worker_count: 2
+            querier:
+              max_concurrent: 1
         promtail:
           enabled: true
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
         grafana:
           enabled: false   # já provido pelo kube-prometheus-stack
+        test_pod:
+          enabled: false
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # Primeiro teste: sincronizar por etapa e medir o consumo antes da próxima.
     syncOptions:
       - CreateNamespace=true

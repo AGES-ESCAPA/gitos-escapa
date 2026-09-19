@@ -5,7 +5,7 @@ resources:
   - ../../base
 replicas:
   - name: escapa-frontend
-    count: 3
+    count: 1
 images:
   - name: ghcr.io/AGES-ESCAPA/escapa-frontend
     newTag: stable

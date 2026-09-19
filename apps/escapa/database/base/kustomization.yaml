@@ -3,4 +3,4 @@ kind: Kustomization
 resources:
   - statefulset.yaml
   - service.yaml
-  - secret.yaml
+  # escapa-database-creds deve ser sincronizado do Vault antes de iniciar o banco.

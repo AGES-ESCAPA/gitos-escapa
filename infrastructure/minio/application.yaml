@@ -13,23 +13,38 @@ spec:
       releaseName: minio
       values: |
         mode: standalone
+        deploymentUpdate:
+          type: Recreate
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 768Mi
         persistence:
           enabled: true
           storageClass: local-path
-          size: 50Gi
+          size: 10Gi
+        existingSecret: minio-root-credentials
+        users: []
+        makeBucketJob:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
         buckets:
           - name: escapa-materiais       # vídeos/materiais complementares dos cursos
             policy: none
           - name: escapa-certificados    # certificados em PDF
             policy: none
-        rootUser: admin
-        rootPassword: changeme   # mover para Vault/ExternalSecret
   destination:
     server: https://kubernetes.default.svc
     namespace: minio
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # Primeiro teste: sincronizar por etapa e medir o consumo antes da próxima.
     syncOptions:
       - CreateNamespace=true

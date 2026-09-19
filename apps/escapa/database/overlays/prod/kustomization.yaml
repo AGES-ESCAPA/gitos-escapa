@@ -9,5 +9,5 @@ patches:
       name: escapa-database
     patch: |-
       - op: replace
-        path: /spec/template/spec/containers/0/resources/requests/storage
-        value: 20Gi
+        path: /spec/volumeClaimTemplates/0/spec/resources/requests/storage
+        value: 5Gi

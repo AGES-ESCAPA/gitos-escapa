@@ -13,20 +13,37 @@ spec:
       releaseName: vault
       values: |
         server:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
           standalone:
             enabled: true
           dataStorage:
             enabled: true
             storageClass: local-path
-            size: 10Gi
+            size: 1Gi
         injector:
           enabled: true   # Vault Agent Injector p/ sidecars no backend
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          agentDefaults:
+            cpuRequest: "50m"
+            cpuLimit: "250m"
+            memRequest: "64Mi"
+            memLimit: "128Mi"
   destination:
     server: https://kubernetes.default.svc
     namespace: vault
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # Primeiro teste: sincronizar por etapa e medir o consumo antes da próxima.
     syncOptions:
       - CreateNamespace=true
