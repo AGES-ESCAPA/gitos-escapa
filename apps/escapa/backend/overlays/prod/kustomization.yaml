@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: escapa-prod
 resources:
   - ../../base
+  - ingress.yaml
 replicas:
   - name: escapa-backend
     count: 1

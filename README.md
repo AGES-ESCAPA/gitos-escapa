@@ -10,12 +10,12 @@ gitops-escapa/
 │   ├── infrastructure-root.yaml   # App-of-apps -> infrastructure/
 │   └── apps-root.yaml             # App-of-apps -> apps/
 ├── infrastructure/                # Stack base do cluster (1 Application ArgoCD por ferramenta, via Helm)
-│   ├── argocd/                    # self-management do próprio ArgoCD (opcional)
+│   ├── argocd/                    # Ingress e configuração HTTP do painel
 │   ├── prometheus/                # métricas (kube-prometheus-stack)
 │   ├── loki/                      # logs (loki + promtail)
+│   ├── cloudflared/               # ConfigMap do túnel -> Traefik
 │   ├── vault/                     # segredos (senhas de banco, chaves de API) - modo standalone
 │   ├── external-secrets/          # operador que sincroniza credenciais do Vault
-│   ├── vault-secrets/             # integrações PostgreSQL, MinIO e Grafana
 │   └── minio/                     # storage S3-compatible (materiais de curso, certificados, backups)
 └── apps/
     └── escapa/                    # App-of-apps da aplicação
@@ -67,13 +67,14 @@ A estratégia `Recreate` do MinIO evita dois servidores usando o mesmo PVC na at
 com uma breve indisponibilidade nesse período.
 
 As credenciais de PostgreSQL, MinIO e Grafana terão o Vault como origem. Os consumidores
-já referenciam Secrets Kubernetes. A instalação do External Secrets Operator e as três
-integrações estão versionadas, com sincronização manual. Siga o
-[procedimento de integração com Vault](docs/vault-secrets.md) após inicializar o Vault.
+já referenciam Secrets Kubernetes. A Application do External Secrets Operator está
+versionada, com sincronização manual. As credenciais, policies e roles serão
+configuradas manualmente no Vault. Instalar o operador não configura as integrações:
+os SecretStores e ExternalSecrets de cada consumidor ainda precisam ser definidos.
 `secret.yaml.example` documenta o formato do banco e não integra sua renderização.
 
 No node, dentro do clone atualizado deste repositório, aplique a raiz de infraestrutura.
-Ela cadastra as ferramentas e integrações de Secrets e gerencia a Application do cloudflared existente:
+Ela cadastra as ferramentas e gerencia a Application do cloudflared existente:
 
 ```bash
 sudo k3s kubectl apply -f bootstrap/infrastructure-root.yaml
@@ -95,7 +96,7 @@ posterior nos manifests, após validar a stack.
 
 Ao criar `operation` diretamente com `kubectl`, inclua as opções da Application em
 `operation.sync.syncOptions`: elas não são copiadas automaticamente pelo patch.
-Para Vault, MinIO, Loki e `vault-secrets-*` use `CreateNamespace=true`. Para Prometheus
+Para Vault, MinIO e Loki use `CreateNamespace=true`. Para Prometheus
 e External Secrets inclua também
 `ServerSideApply=true`, necessário para aplicar suas CRDs grandes.
 
@@ -172,30 +173,33 @@ Os secrets abaixo são pré-requisitos para os pods subirem e são criados fora 
 (`terraform-aws-k3s`, via `user_data`) no primeiro boot do node — nunca commitados aqui:
 
 - `ghcr-pull-secret` (namespace `escapa-prod`) — credencial para puxar as imagens privadas do GHCR.
-- `cloudflared-credentials` (namespace `cloudflared`) — chave `token` com o token do túnel
-  gerenciado remotamente (`config_src = "cloudflare"` no Terraform). O Deployment lê
-  essa chave como `TUNNEL_TOKEN`; não usa `credentials.json` nem ConfigMap de rotas.
+- `cloudflared-local-credentials` (`cloudflared`) — chaves `credentials.json` e
+  `tunnel-id` do túnel local. As rotas ficam no ConfigMap, sem credenciais no Git.
+- `cloudflared-credentials` (`cloudflared`) — token do conector remoto anterior,
+  preservado temporariamente durante a migração dos CNAMEs.
 
-Outros três terão origem no Vault e serão materializados por External Secrets Operator
-([instalação e configuração](docs/vault-secrets.md)):
+Outros três terão origem no Vault. Sua integração com o External Secrets Operator
+ainda precisa ser configurada:
 
 - `escapa-database-creds` (`escapa-prod`): chaves `username` e `password`.
 - `minio-root-credentials` (`minio`): chaves `rootUser` e `rootPassword`.
 - `grafana-admin-credentials` (`monitoring`): chaves `admin-user` e `admin-password`.
 
-As rotas `app`/`api` são mantidas pelo Terraform na Cloudflare. Em clusters criados com
-o bootstrap antigo, atualize o Secret antes de sincronizar `cloudflared`; o procedimento
-está no README do Terraform. Publique as alterações deste repositório antes
-da sincronização: o ArgoCD lê `main` no GitHub, não os arquivos do seu computador.
-Quando `/ready` responder, os pods estarão conectados à Cloudflare; os sites ainda
-dependem dos Services e aplicações de frontend/backend.
+O DNS é cadastrado manualmente no painel Cloudflare. O ConfigMap do `cloudflared`
+encaminha os subdomínios para o Traefik; cada aplicação declara seu hostname no Ingress.
+Argo e Vault usam `argo.escapaages.online` e `vault.escapaages.online`.
+Siga a [migração para túnel local](infrastructure/cloudflared/README.md), que mantém
+os conectores antigos durante a troca de DNS. O ArgoCD lê `main` no GitHub: publique
+os manifests antes de sincronizar. Os hosts `app`/`api` continuam dependendo de imagens,
+Secrets e pods funcionais; criar seus Ingress não resolve os placeholders atuais.
 
 Se você recriar esses namespaces manualmente (fora do fluxo Terraform), precisa recriar os secrets
 também, ou os pods do backend/frontend/cloudflared ficam em `ImagePullBackOff`/`CrashLoopBackOff`.
 
 ## Próximos passos sugeridos (fora deste primeiro corte)
 
-- Ingress controller + cert-manager para TLS automático dos hosts (não incluído ainda).
+- O Traefik do k3s atende aos Ingress internos; HTTPS público é terminado na Cloudflare.
+  Avaliar certificados internos caso seja necessário TLS também dentro do cluster.
 - Configurar o Vault Agent Injector do backend, com policy e role próprias.
 - Configurar Loki para usar o Minio como backend de armazenamento dos chunks (`storage_config.aws` apontando
   pro Minio via S3 API) — assim os logs também usam o storage próprio do cluster.

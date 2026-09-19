@@ -1,33 +1,43 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cloudflared
+  name: cloudflared-local
   namespace: cloudflared
 spec:
   replicas: 2   # 2 conectores == redundancia do tunel (nao de storage, sao stateless)
   selector:
     matchLabels:
-      app: cloudflared
+      app: cloudflared-local
   template:
     metadata:
       labels:
-        app: cloudflared
+        app: cloudflared-local
     spec:
       containers:
         - name: cloudflared
           image: cloudflare/cloudflared:2024.10.1
           args:
             - tunnel
+            - --config
+            - /etc/cloudflared/config.yaml
             - --no-autoupdate
             - --metrics
             - 0.0.0.0:2000
             - run
+            - $(TUNNEL_ID)
           env:
-            - name: TUNNEL_TOKEN
+            - name: TUNNEL_ID
               valueFrom:
                 secretKeyRef:
-                  name: cloudflared-credentials
-                  key: token
+                  name: cloudflared-local-credentials
+                  key: tunnel-id
+          volumeMounts:
+            - name: config
+              mountPath: /etc/cloudflared
+              readOnly: true
+            - name: credentials
+              mountPath: /etc/cloudflared-credentials
+              readOnly: true
           readinessProbe:
             httpGet:
               path: /ready
@@ -47,3 +57,13 @@ spec:
             limits:
               cpu: 200m
               memory: 128Mi
+      volumes:
+        - name: config
+          configMap:
+            name: cloudflared-config
+        - name: credentials
+          secret:
+            secretName: cloudflared-local-credentials
+            items:
+              - key: credentials.json
+                path: credentials.json

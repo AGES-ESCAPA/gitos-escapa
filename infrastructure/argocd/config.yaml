@@ -1,0 +1,17 @@
+# Configuração parcial: o ArgoCD continua instalado pelo bootstrap.
+# HTTPS público termina na Cloudflare; Traefik -> Argo usa HTTP interno.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+  namespace: argocd
+data:
+  server.insecure: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+data:
+  url: https://argo.escapaages.online

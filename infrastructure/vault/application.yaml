@@ -13,6 +13,15 @@ spec:
       releaseName: vault
       values: |
         server:
+          ingress:
+            enabled: true
+            ingressClassName: traefik
+            annotations:
+              traefik.ingress.kubernetes.io/router.entrypoints: web
+            hosts:
+              - host: vault.escapaages.online
+                paths:
+                  - /
           resources:
             requests:
               cpu: 100m

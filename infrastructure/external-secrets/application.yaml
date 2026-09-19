@@ -45,7 +45,7 @@ spec:
     server: https://kubernetes.default.svc
     namespace: external-secrets
   syncPolicy:
-    # Instalar o operador antes das Applications vault-secrets-*.
+    # Sincronização manual durante a configuração inicial do operador.
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
