@@ -14,6 +14,8 @@ gitops-escapa/
 │   ├── prometheus/                # métricas (kube-prometheus-stack)
 │   ├── loki/                      # logs (loki + promtail)
 │   ├── vault/                     # segredos (senhas de banco, chaves de API) - modo standalone
+│   ├── external-secrets/          # operador que sincroniza credenciais do Vault
+│   ├── vault-secrets/             # integrações PostgreSQL, MinIO e Grafana
 │   └── minio/                     # storage S3-compatible (materiais de curso, certificados, backups)
 └── apps/
     └── escapa/                    # App-of-apps da aplicação
@@ -38,6 +40,7 @@ de aplicar `apps-root`.
 | MinIO standalone | 512 MiB | 768 MiB | 10 GiB |
 | Vault server | 128 MiB | 256 MiB | 1 GiB |
 | Vault injector | 64 MiB | 128 MiB | — |
+| External Secrets (3 pods) | 128 MiB | 512 MiB | — |
 | Prometheus | 256 MiB | 512 MiB | 3 GiB |
 | Grafana | 128 MiB | 256 MiB | 1 GiB |
 | Alertmanager | 32 MiB | 64 MiB | — |
@@ -64,13 +67,13 @@ A estratégia `Recreate` do MinIO evita dois servidores usando o mesmo PVC na at
 com uma breve indisponibilidade nesse período.
 
 As credenciais de PostgreSQL, MinIO e Grafana terão o Vault como origem. Os consumidores
-já referenciam Secrets Kubernetes; a sincronização Vault -> Kubernetes será configurada
-com External Secrets Operator após inicializar o Vault. Esse operador e seus manifests
-ainda não estão instalados nem incluídos neste repositório.
+já referenciam Secrets Kubernetes. A instalação do External Secrets Operator e as três
+integrações estão versionadas, com sincronização manual. Siga o
+[procedimento de integração com Vault](docs/vault-secrets.md) após inicializar o Vault.
 `secret.yaml.example` documenta o formato do banco e não integra sua renderização.
 
 No node, dentro do clone atualizado deste repositório, aplique a raiz de infraestrutura.
-Ela cadastra MinIO, Vault, Prometheus e Loki e gerencia a Application do cloudflared existente:
+Ela cadastra as ferramentas e integrações de Secrets e gerencia a Application do cloudflared existente:
 
 ```bash
 sudo k3s kubectl apply -f bootstrap/infrastructure-root.yaml
@@ -81,7 +84,7 @@ Comece apenas pelo Vault, que não depende das credenciais das outras aplicaçõ
 
 ```bash
 sudo k3s kubectl -n argocd wait --for=create application/vault --timeout=120s
-sudo k3s kubectl -n argocd patch application vault --type=merge -p '{"operation":{"sync":{"syncStrategy":{"hook":{}}}}}'
+sudo k3s kubectl -n argocd patch application vault --type=merge -p '{"operation":{"sync":{"syncOptions":["CreateNamespace=true"],"syncStrategy":{"hook":{}}}}}'
 sudo k3s kubectl -n vault get pods,pvc
 ```
 
@@ -89,6 +92,12 @@ Omitir `revision` da operação usa a versão fixada
 em `spec.source.targetRevision`. Não use
 `main` como revision de chart Helm. Habilitar sincronização automática é uma alteração
 posterior nos manifests, após validar a stack.
+
+Ao criar `operation` diretamente com `kubectl`, inclua as opções da Application em
+`operation.sync.syncOptions`: elas não são copiadas automaticamente pelo patch.
+Para Vault, MinIO, Loki e `vault-secrets-*` use `CreateNamespace=true`. Para Prometheus
+e External Secrets inclua também
+`ServerSideApply=true`, necessário para aplicar suas CRDs grandes.
 
 Vault inicia **selado e não inicializado**. Sua inicialização, guarda das chaves de
 unseal e configuração de autenticação Kubernetes/policies são etapas posteriores.
@@ -168,7 +177,7 @@ Os secrets abaixo são pré-requisitos para os pods subirem e são criados fora 
   essa chave como `TUNNEL_TOKEN`; não usa `credentials.json` nem ConfigMap de rotas.
 
 Outros três terão origem no Vault e serão materializados por External Secrets Operator
-(integração a configurar depois da inicialização do Vault):
+([instalação e configuração](docs/vault-secrets.md)):
 
 - `escapa-database-creds` (`escapa-prod`): chaves `username` e `password`.
 - `minio-root-credentials` (`minio`): chaves `rootUser` e `rootPassword`.
@@ -187,8 +196,7 @@ também, ou os pods do backend/frontend/cloudflared ficam em `ImagePullBackOff`/
 ## Próximos passos sugeridos (fora deste primeiro corte)
 
 - Ingress controller + cert-manager para TLS automático dos hosts (não incluído ainda).
-- Configurar **External Secrets Operator** para materializar as credenciais de PostgreSQL,
-  MinIO e Grafana do Vault em Secrets Kubernetes, e configurar o Vault Agent Injector do backend.
+- Configurar o Vault Agent Injector do backend, com policy e role próprias.
 - Configurar Loki para usar o Minio como backend de armazenamento dos chunks (`storage_config.aws` apontando
   pro Minio via S3 API) — assim os logs também usam o storage próprio do cluster.
 - Como `local-path` não tem snapshot nativo (ao contrário do Longhorn), configurar um `CronJob` de

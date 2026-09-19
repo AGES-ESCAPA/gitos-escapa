@@ -6,3 +6,7 @@ resources:
   - vault/application.yaml
   - minio/application.yaml
   - cloudflared/application.yaml
+  - external-secrets/application.yaml
+  - vault-secrets/database-application.yaml
+  - vault-secrets/minio-application.yaml
+  - vault-secrets/grafana-application.yaml
