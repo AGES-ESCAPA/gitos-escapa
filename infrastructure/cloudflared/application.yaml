@@ -13,8 +13,6 @@ spec:
     server: https://kubernetes.default.svc
     namespace: cloudflared
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # Sincronização manual durante a configuração inicial do conector.
     syncOptions:
       - CreateNamespace=true

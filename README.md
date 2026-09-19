@@ -34,7 +34,8 @@ gitops-escapa/
    kubectl apply -f bootstrap/infrastructure-root.yaml
    kubectl apply -f bootstrap/apps-root.yaml
    ```
-3. A partir daí, tudo é sincronizado automaticamente pelo ArgoCD (`syncPolicy: automated`, `selfHeal: true`).
+3. A partir daí, as Applications com `syncPolicy: automated` são sincronizadas automaticamente
+   pelo ArgoCD. `cloudflared` está temporariamente em sincronização manual durante a correção do túnel.
    Qualquer mudança futura é feita via commit neste repositório — nunca via `kubectl apply` direto no cluster.
 
 ## Storage: por que local-path e não Longhorn
@@ -81,7 +82,16 @@ Dois secrets são pré-requisito para os pods subirem e são criados fora do Git
 (`terraform-aws-k3s`, via `user_data`) no primeiro boot do node — nunca commitados aqui:
 
 - `ghcr-pull-secret` (namespace `escapa-prod`) — credencial para puxar as imagens privadas do GHCR.
-- `cloudflared-credentials` (namespace `cloudflared`) — credenciais do túnel Cloudflare.
+- `cloudflared-credentials` (namespace `cloudflared`) — chave `token` com o token do túnel
+  gerenciado remotamente (`config_src = "cloudflare"` no Terraform). O Deployment lê
+  essa chave como `TUNNEL_TOKEN`; não usa `credentials.json` nem ConfigMap de rotas.
+
+As rotas `app`/`api` são mantidas pelo Terraform na Cloudflare. Em clusters criados com
+o bootstrap antigo, atualize o Secret antes de sincronizar `cloudflared`; o procedimento
+está no README do Terraform. Publique as alterações deste repositório antes
+da sincronização: o ArgoCD lê `main` no GitHub, não os arquivos do seu computador.
+Quando `/ready` responder, os pods estarão conectados à Cloudflare; os sites ainda
+dependem dos Services e aplicações de frontend/backend.
 
 Se você recriar esses namespaces manualmente (fora do fluxo Terraform), precisa recriar os secrets
 também, ou os pods do backend/frontend/cloudflared ficam em `ImagePullBackOff`/`CrashLoopBackOff`.
