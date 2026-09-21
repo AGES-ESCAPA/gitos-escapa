@@ -1,17 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: escapa-frontend-prod
+  name: escapa-frontend
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/AGES-ESCAPA/gitos-escapa.git
     targetRevision: main
-    path: apps/escapa/frontend/overlays/prod
+    path: apps/escapa/frontend
   destination:
     server: https://kubernetes.default.svc
-    namespace: escapa-prod
+    namespace: escapa
   syncPolicy:
     automated:
       prune: true

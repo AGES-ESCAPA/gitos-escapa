@@ -15,7 +15,7 @@ O Deployment lê `tunnel-id` e monta `credentials.json` do Secret
 `cloudflared-local-credentials`, criado fora do Git. O modo local não usa
 `TUNNEL_TOKEN` nem as rotas de Published Applications do painel.
 
-## Migração do túnel remoto existente
+## Configuração
 
 Os comandos são executados pelo administrador. Mantenha a sessão SSH disponível
 durante a configuração. A sincronização das Applications de infraestrutura é manual.
@@ -64,7 +64,7 @@ do Argo para HTTPS em loop. O login do Argo continua obrigatório.
 O antigo port-forward SSH do Argo passa a ser acessado com **http://localhost:8080**.
 A adição do Ingress do Vault não altera seu StatefulSet ou armazenamento.
 
-Frontend/API têm Ingress nos overlays `prod`; suas Applications atuais os aplicam
+Frontend/API têm Ingress em suas pastas de manifests; suas Applications os aplicam
 na próxima sincronização. As imagens ainda precisam ser publicadas para os sites responderem.
 
 ## Conectar o túnel local
@@ -81,9 +81,8 @@ sudo k3s kubectl -n cloudflared rollout status deployment/cloudflared-local --ti
 sudo k3s kubectl -n cloudflared logs deployment/cloudflared-local --tail=30
 ```
 
-Espere `Registered tunnel connection`. Durante a migração haverá dois Deployments:
-`cloudflared` usa o túnel antigo e `cloudflared-local` usa o novo, ambos com duas réplicas.
-Essa duplicação é temporária para permitir testar os painéis antes de trocar `app`/`api`.
+Espere `Registered tunnel connection`. O Deployment `cloudflared-local` mantém
+duas réplicas conectadas ao túnel `escapa-ingress`.
 
 ## DNS pelo painel Cloudflare
 
@@ -93,8 +92,8 @@ Em DNS -> Records, crie CNAMEs **Proxied** com TTL Auto:
 |---|---|---|
 | `argo` | saída de `cloudflare_local_tunnel_cname` | `argocd/argocd-server` |
 | `vault` | mesmo destino | `vault/vault` |
-| `app` | mesmo destino | `escapa-prod/escapa-frontend` |
-| `api` | mesmo destino | `escapa-prod/escapa-backend` |
+| `app` | mesmo destino | `escapa/escapa-frontend` |
+| `api` | mesmo destino | `escapa/escapa-backend` |
 
 Comece por `argo` e `vault`; se já existirem registros para esses nomes, edite-os.
 Não crie rotas de Published Applications: a configuração local já encaminha os hosts
@@ -103,19 +102,20 @@ Teste `https://argo.escapaages.online` e `https://vault.escapaages.online/ui/`, 
 o login. Depois troque o destino dos CNAMEs existentes `app` e `api` quando seus Ingress
 estiverem presentes.
 
-Se precisar voltar, os CNAMEs podem apontar novamente ao UUID do túnel remoto,
-enquanto `deployment-remote.yaml` e o Secret antigo forem mantidos. Hosts adicionais
-só funcionarão no túnel remoto se tiverem rotas lá. O túnel local não exige reiniciar
-os conectores para novos hosts: basta criar o Ingress e o CNAME correspondente.
+O túnel local não exige reiniciar os conectores para novos hosts: basta criar o
+Ingress e o CNAME correspondente.
 
-## Encerrar a migração
+## Limpeza da configuração anterior
 
-Depois de validar todos os hosts no túnel local, remova `deployment-remote.yaml` e
-sua referência no Kustomization e sincronize `cloudflared` com prune, conferindo que
-somente o Deployment antigo será excluído. Só então remova o Secret antigo e retire
-o túnel remoto, seu recurso de configuração e o bootstrap de compatibilidade do
-Terraform. Não exclua o túnel remoto no painel enquanto ele ainda for gerenciado
-pelo Terraform.
+A configuração remota foi retirada dos repositórios. Em um cluster existente,
+sincronize a Application `cloudflared` com prune após publicar essas alterações para
+remover o Deployment antigo `cloudflared`. O Secret antigo `cloudflared-credentials`,
+criado fora do GitOps, pode ser excluído manualmente. O Secret usado pelo conector
+atual é `cloudflared-local-credentials`.
+
+No Terraform, o próximo plano completo deverá propor a remoção do túnel remoto,
+de sua configuração e do segredo aleatório antigo. Revise separadamente qualquer
+diferença da EC2; não é necessário modificar a VM para remover o túnel antigo.
 
 Novas aplicações devem manter o Ingress junto aos seus manifests/valores Helm.
 O host precisa estar sob `escapaages.online` para corresponder à regra do túnel.

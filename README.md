@@ -19,9 +19,9 @@ gitops-escapa/
 │   └── minio/                     # storage S3-compatible (materiais de curso, certificados, backups)
 └── apps/
     └── escapa/                    # App-of-apps da aplicação
-        ├── frontend/base + overlays/{dev,prod}
-        ├── backend/base  + overlays/{dev,prod}
-        └── database/base + overlays/{dev,prod}
+        ├── frontend/                     # Deployment, Service, Ingress e Kustomization
+        ├── backend/                      # Deployment, ServiceAccount, Service e Ingress
+        └── database/                     # StatefulSet, Service e Kustomization
 ```
 
 ## Fluxo de bootstrap
@@ -31,10 +31,10 @@ gitops-escapa/
 O perfil de testes inclui banco, MinIO, Vault, cloudflared, Prometheus/Grafana/Alertmanager
 e Loki/Promtail. Todas as Applications de infraestrutura ficam cadastradas pela raiz,
 com sincronização manual para iniciar cada componente e medir o consumo. Frontend e
-backend têm uma réplica em `prod`; suas imagens ainda precisam estar prontas antes
+backend têm uma réplica cada; suas imagens ainda precisam estar prontas antes
 de aplicar `apps-root`.
 
-| Componente | Memória solicitada | Limite de memória | PVC em prod |
+| Componente | Memória solicitada | Limite de memória | PVC |
 |---|---:|---:|---:|
 | PostgreSQL | 256 MiB | 512 MiB | 5 GiB |
 | MinIO standalone | 512 MiB | 768 MiB | 10 GiB |
@@ -157,39 +157,46 @@ réplicas só triplicariam o consumo de recursos sem tolerância a falha adicion
 | **Vault** (standalone) | Gestão de segredos (credenciais do banco, chaves JWT, etc.) | vault |
 | **cloudflared** | Túnel outbound-only da Cloudflare — expõe frontend/backend publicamente sem abrir porta na AWS | cloudflared |
 | **Minio** | Storage S3-compatible (vídeos/materiais de curso, certificados PDF, backups) | minio |
-| **Escapa Frontend** | Web app (catálogo de cursos, área do aluno) | escapa-{dev,prod} |
-| **Escapa Backend** | API (cursos, progresso, certificados, admin) | escapa-{dev,prod} |
-| **Escapa Database** | Persistência (Postgres, StatefulSet + PVC local-path) | escapa-{dev,prod} |
+| **Escapa Frontend** | Web app (catálogo de cursos, área do aluno) | escapa |
+| **Escapa Backend** | API (cursos, progresso, certificados, admin) | escapa |
+| **Escapa Database** | Persistência (Postgres, StatefulSet + PVC local-path) | escapa |
 
-## Ambientes
+## Ambiente único
 
-Dois overlays por componente da aplicação: `dev` e `prod`, diferenciando namespace, réplicas, tag de imagem
-e limites de recursos. A infraestrutura (Prometheus/Loki/Vault/Minio) roda uma vez só, compartilhada
-pelo cluster.
+Frontend, backend e banco usam o namespace `escapa`. Os manifests ficam diretamente
+na pasta de cada componente, sem base e overlays. As Applications `escapa-frontend`,
+`escapa-backend` e `escapa-database` apontam para essas pastas. A infraestrutura
+permanece nos namespaces próprios de cada ferramenta.
+
+Em clusters que usavam `escapa-prod`, publicar essa alteração cria as novas
+Applications e seus recursos em `escapa`; não renomeia nem transfere os recursos
+existentes. Prepare `ghcr-pull-secret`, as credenciais do banco e a role do Vault
+para o novo namespace. Um PVC existente também não é transferido entre namespaces.
+A raiz remove as Applications antigas com prune; como os manifests anteriores
+não tinham finalizer de exclusão em cascata, seus workloads podem permanecer no
+namespace antigo e devem ser removidos separadamente após conferir os dados.
 
 ## Segredos que NÃO vêm deste repositório
 
 Os secrets abaixo são pré-requisitos para os pods subirem e são criados fora do Git, pelo Terraform
 (`terraform-aws-k3s`, via `user_data`) no primeiro boot do node — nunca commitados aqui:
 
-- `ghcr-pull-secret` (namespace `escapa-prod`) — credencial para puxar as imagens privadas do GHCR.
+- `ghcr-pull-secret` (namespace `escapa`) — credencial para puxar as imagens privadas do GHCR.
 - `cloudflared-local-credentials` (`cloudflared`) — chaves `credentials.json` e
   `tunnel-id` do túnel local. As rotas ficam no ConfigMap, sem credenciais no Git.
-- `cloudflared-credentials` (`cloudflared`) — token do conector remoto anterior,
-  preservado temporariamente durante a migração dos CNAMEs.
 
 Outros três terão origem no Vault. Sua integração com o External Secrets Operator
 ainda precisa ser configurada:
 
-- `escapa-database-creds` (`escapa-prod`): chaves `username` e `password`.
+- `escapa-database-creds` (`escapa`): chaves `username` e `password`.
 - `minio-root-credentials` (`minio`): chaves `rootUser` e `rootPassword`.
 - `grafana-admin-credentials` (`monitoring`): chaves `admin-user` e `admin-password`.
 
 O DNS é cadastrado manualmente no painel Cloudflare. O ConfigMap do `cloudflared`
 encaminha os subdomínios para o Traefik; cada aplicação declara seu hostname no Ingress.
 Argo e Vault usam `argo.escapaages.online` e `vault.escapaages.online`.
-Siga a [migração para túnel local](infrastructure/cloudflared/README.md), que mantém
-os conectores antigos durante a troca de DNS. O ArgoCD lê `main` no GitHub: publique
+Siga a [configuração do túnel local](infrastructure/cloudflared/README.md).
+O ArgoCD lê `main` no GitHub: publique
 os manifests antes de sincronizar. Os hosts `app`/`api` continuam dependendo de imagens,
 Secrets e pods funcionais; criar seus Ingress não resolve os placeholders atuais.
 

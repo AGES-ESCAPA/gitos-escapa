@@ -3,8 +3,6 @@ kind: Kustomization
 namespace: cloudflared
 resources:
   - deployment.yaml
-  # Temporário: mantém o túnel remoto funcionando até migrar os CNAMEs.
-  - deployment-remote.yaml
 configMapGenerator:
   - name: cloudflared-config
     files:
