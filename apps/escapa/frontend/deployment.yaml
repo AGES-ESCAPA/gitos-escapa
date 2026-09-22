@@ -5,7 +5,7 @@ metadata:
   labels:
     app: escapa-frontend
 spec:
-  replicas: 1
+  replicas: 0 # Pausado até publicar a imagem.
   selector:
     matchLabels:
       app: escapa-frontend

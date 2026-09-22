@@ -4,7 +4,7 @@ metadata:
   name: escapa-database
 spec:
   serviceName: escapa-database
-  replicas: 1
+  replicas: 0 # Pausado até configurar o Secret escapa-database-creds.
   selector:
     matchLabels:
       app: escapa-database
