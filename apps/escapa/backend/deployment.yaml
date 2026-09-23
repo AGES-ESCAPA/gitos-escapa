@@ -5,7 +5,7 @@ metadata:
   labels:
     app: escapa-backend
 spec:
-  replicas: 0 # Pausado até publicar a imagem e configurar as credenciais.
+  replicas: 1
   selector:
     matchLabels:
       app: escapa-backend
@@ -13,11 +13,6 @@ spec:
     metadata:
       labels:
         app: escapa-backend
-      annotations:
-        # Vault Agent Injector: injeta segredos do Vault como arquivos no pod
-        vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/role: "escapa-backend"
-        vault.hashicorp.com/agent-inject-secret-db-creds: "secret/data/escapa/database"
     spec:
       serviceAccountName: escapa-backend
       imagePullSecrets:
@@ -27,6 +22,9 @@ spec:
           image: ghcr.io/ages-escapa/escapa-backend:c8b471febcbee5bbc0e36789f4a14ac62acdc1fb
           ports:
             - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: escapa-backend-config
           env:
             - name: DATABASE_HOST
               value: "escapa-database"

@@ -4,7 +4,7 @@ metadata:
   name: escapa-database
 spec:
   serviceName: escapa-database
-  replicas: 0 # Pausado até configurar o Secret escapa-database-creds.
+  replicas: 1
   selector:
     matchLabels:
       app: escapa-database
@@ -20,7 +20,10 @@ spec:
             - containerPort: 5432
           env:
             - name: POSTGRES_DB
-              value: "escapa"
+              valueFrom:
+                secretKeyRef:
+                  name: escapa-database-creds
+                  key: dbname
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:

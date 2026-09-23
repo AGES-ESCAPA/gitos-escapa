@@ -4,4 +4,5 @@ namespace: escapa
 resources:
   - statefulset.yaml
   - service.yaml
-  # escapa-database-creds deve ser sincronizado do Vault antes de iniciar o banco.
+  - secrets.yaml
+  # escapa-database-creds é materializado pelo ExternalSecret acima, a partir do Vault.
