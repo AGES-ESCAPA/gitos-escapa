@@ -21,6 +21,9 @@ spec:
           image: ghcr.io/ages-escapa/escapa-frontend:be613cf928a65788653339b07caf2aa9f8192ae9
           ports:
             - containerPort: 80
+          envFrom:
+            - secretRef:
+                name: escapa-frontend-config
           resources:
             requests:
               cpu: 100m
