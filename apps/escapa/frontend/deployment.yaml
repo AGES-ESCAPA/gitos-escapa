@@ -5,7 +5,7 @@ metadata:
   labels:
     app: escapa-frontend
 spec:
-  replicas: 0 # Pausado até publicar a imagem.
+  replicas: 1
   selector:
     matchLabels:
       app: escapa-frontend
@@ -23,7 +23,7 @@ spec:
             - containerPort: 3000
           env:
             - name: NEXT_PUBLIC_API_URL
-              value: "https://api.SEU_DOMINIO"   # ajustar para a URL pública da API
+              value: "https://api.escapaages.online"
           resources:
             requests:
               cpu: 100m
