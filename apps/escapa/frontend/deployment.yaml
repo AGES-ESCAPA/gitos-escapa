@@ -20,10 +20,7 @@ spec:
         - name: frontend
           image: ghcr.io/ages-escapa/escapa-frontend:be613cf928a65788653339b07caf2aa9f8192ae9
           ports:
-            - containerPort: 3000
-          env:
-            - name: NEXT_PUBLIC_API_URL
-              value: "https://api.escapaages.online"
+            - containerPort: 80
           resources:
             requests:
               cpu: 100m
@@ -33,11 +30,11 @@ spec:
               memory: 256Mi
           readinessProbe:
             httpGet:
-              path: /
-              port: 3000
+              path: /health
+              port: 80
             initialDelaySeconds: 5
           livenessProbe:
             httpGet:
-              path: /
-              port: 3000
+              path: /health
+              port: 80
             initialDelaySeconds: 15
