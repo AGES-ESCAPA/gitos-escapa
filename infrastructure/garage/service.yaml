@@ -1,0 +1,30 @@
+# S3 API e admin ficam só dentro do cluster; somente o endpoint web (leitura pública) é exposto via Ingress.
+apiVersion: v1
+kind: Service
+metadata:
+  name: garage
+spec:
+  selector:
+    app: garage
+  ports:
+    - name: s3
+      port: 3900
+      targetPort: s3
+    - name: rpc
+      port: 3901
+      targetPort: rpc
+    - name: admin
+      port: 3903
+      targetPort: admin
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: garage-web
+spec:
+  selector:
+    app: garage
+  ports:
+    - name: web
+      port: 3902
+      targetPort: web

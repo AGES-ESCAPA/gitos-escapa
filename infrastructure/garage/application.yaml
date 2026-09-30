@@ -1,18 +1,18 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: minio-config
+  name: garage
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/AGES-ESCAPA/gitos-escapa.git
     targetRevision: main
-    path: infrastructure/minio-config
+    path: infrastructure/garage
   destination:
     server: https://kubernetes.default.svc
-    namespace: minio
+    namespace: garage
   syncPolicy:
-    # Sincronizar antes da Application minio: ela depende do secret minio-root-credentials.
+    # Sincronização manual: o layout do cluster Garage é aplicado à mão no primeiro boot (ver README.md).
     syncOptions:
       - CreateNamespace=true

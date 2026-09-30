@@ -1,0 +1,23 @@
+# rpc_secret e admin_token vêm das variáveis GARAGE_RPC_SECRET e GARAGE_ADMIN_TOKEN (Vault).
+metadata_dir = "/meta"
+data_dir = "/data"
+db_engine = "lmdb"
+
+# Nó único: sem replicação.
+replication_factor = 1
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+
+[s3_api]
+api_bind_addr = "[::]:3900"
+s3_region = "garage"
+root_domain = ".s3.garage"
+
+# Leitura pública: o bucket é resolvido pelo cabeçalho Host (alias global = hostname público).
+[s3_web]
+bind_addr = "[::]:3902"
+root_domain = ".web.garage"
+
+[admin]
+api_bind_addr = "[::]:3903"
