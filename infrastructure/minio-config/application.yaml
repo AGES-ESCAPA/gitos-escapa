@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio-config
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AGES-ESCAPA/gitos-escapa.git
+    targetRevision: main
+    path: infrastructure/minio-config
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: minio
+  syncPolicy:
+    # Sincronizar antes da Application minio: ela depende do secret minio-root-credentials.
+    syncOptions:
+      - CreateNamespace=true
