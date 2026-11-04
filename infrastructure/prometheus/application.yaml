@@ -18,6 +18,26 @@ spec:
             existingSecret: grafana-admin-credentials
             userKey: admin-user
             passwordKey: admin-password
+          # Publico em grafana.escapaages.online: Cloudflare termina o TLS e o tunel
+          # encaminha *.escapaages.online para o Traefik (entrypoint web, HTTP).
+          ingress:
+            enabled: true
+            ingressClassName: traefik
+            annotations:
+              traefik.ingress.kubernetes.io/router.entrypoints: web
+            hosts:
+              - grafana.escapaages.online
+            path: /
+          grafana.ini:
+            server:
+              root_url: https://grafana.escapaages.online
+            security:
+              cookie_secure: true
+              disable_gravatar: true
+            users:
+              allow_sign_up: false
+            auth.anonymous:
+              enabled: false
           resources:
             requests:
               cpu: 50m
