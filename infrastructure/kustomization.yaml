@@ -6,6 +6,7 @@ resources:
   - prometheus/application.yaml
   - loki/application.yaml
   - vault/application.yaml
+  - vault-unsealer/application.yaml
   - garage/application.yaml
   - cloudflared/application.yaml
   - external-secrets/application.yaml

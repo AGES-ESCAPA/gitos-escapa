@@ -1,0 +1,90 @@
+# Destrava o Vault sozinho depois de cada boot da VM (a EC2 liga/desliga por
+# agendamento). A cada 15s consulta o status; se estiver selado, envia as chaves.
+#
+# As chaves ficam no Secret vault-unseal-keys, criado manualmente e fora do Git
+# (key1, key2, key3 = 3 das 5 chaves; threshold 3). Trade-off aceito: quem puder
+# ler Secrets do namespace vault consegue destravar o Vault.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-unsealer
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault-unsealer
+  labels:
+    app: vault-unsealer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault-unsealer
+  template:
+    metadata:
+      labels:
+        app: vault-unsealer
+    spec:
+      serviceAccountName: vault-unsealer
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 1000
+      containers:
+        - name: unsealer
+          image: hashicorp/vault:1.18.1   # mesma versao do servidor, ja presente no node
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -u
+              echo "vault-unsealer: observando $VAULT_ADDR"
+              while true; do
+                vault status >/dev/null 2>&1
+                rc=$?
+                # 0 = destravado, 2 = selado, outro = Vault fora do ar
+                if [ "$rc" -eq 2 ]; then
+                  echo "$(date -u +%FT%TZ) selado, destravando"
+                  for f in /keys/key1 /keys/key2 /keys/key3; do
+                    vault operator unseal "$(cat "$f")" >/dev/null 2>&1 || echo "falha ao enviar $(basename "$f")"
+                  done
+                  vault status >/dev/null 2>&1 && echo "$(date -u +%FT%TZ) destravado"
+                elif [ "$rc" -ne 0 ]; then
+                  echo "$(date -u +%FT%TZ) Vault indisponivel (rc=$rc)"
+                fi
+                sleep 15
+              done
+          env:
+            - name: VAULT_ADDR
+              value: http://vault.vault.svc.cluster.local:8200
+            # A imagem tenta usar mlock e escrever o token em $HOME; nada disso e necessario aqui.
+            - name: SKIP_SETCAP
+              value: "true"
+            - name: HOME
+              value: /tmp
+          volumeMounts:
+            - name: keys
+              mountPath: /keys
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: keys
+          secret:
+            secretName: vault-unseal-keys
+            defaultMode: 0400
+        - name: tmp
+          emptyDir: {}

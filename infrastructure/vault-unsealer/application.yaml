@@ -1,0 +1,20 @@
+# Unseal automatico do Vault apos o boot da VM. Requer o Secret vault-unseal-keys
+# (criado manualmente no namespace vault, fora do Git) antes de sincronizar.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault-unsealer
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AGES-ESCAPA/gitos-escapa.git
+    targetRevision: main
+    path: infrastructure/vault-unsealer
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
