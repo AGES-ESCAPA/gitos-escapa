@@ -45,6 +45,10 @@ spec:
             limits:
               cpu: 500m
               memory: 256Mi
+          # Remove do banco do Grafana o datasource provisionado antes de desligar o Alertmanager.
+          deleteDatasources:
+            - name: Alertmanager
+              orgId: 1
           # Os sidecars (k8s-sidecar, Python) usam ~65Mi parados: com 64Mi levavam OOMKilled.
           sidecar:
             # Alertmanager esta desligado; sem isto o Grafana ganha um datasource quebrado.

@@ -14,6 +14,11 @@ spec:
       values: |
         loki:
           isDefault: false
+          # O chart traz o Loki 2.6.1, que o Grafana 11 nao consegue consultar
+          # (health check falha e as consultas voltam vazias). 2.9.x e a ultima
+          # linha 2.x, compativel com a config boltdb-shipper gerada pelo chart.
+          image:
+            tag: 2.9.10
           resources:
             requests:
               cpu: 50m
