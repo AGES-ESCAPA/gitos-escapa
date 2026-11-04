@@ -1,0 +1,19 @@
+# Secrets do namespace monitoring vindos do Vault. Sincronizar antes do prometheus,
+# que depende do Secret grafana-admin-credentials.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-secrets
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AGES-ESCAPA/gitos-escapa.git
+    targetRevision: main
+    path: infrastructure/monitoring-secrets
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
