@@ -28,20 +28,45 @@ spec:
           env:
             - name: DATABASE_HOST
               value: "escapa-database"
+            # O container divide a memoria entre a JVM e o Chromium/driver do
+            # Playwright (~120Mi). Heap fixo em vez do padrao de 25% do limite e
+            # tetos para a memoria nativa, que cresce em dias ate o OOMKilled.
+            - name: JAVA_TOOL_OPTIONS
+              value: >-
+                -Xms192m -Xmx192m
+                -XX:MaxMetaspaceSize=256m
+                -XX:ReservedCodeCacheSize=64m
+                -XX:MaxDirectMemorySize=32m
+                -Xss512k
+                -XX:+ExitOnOutOfMemoryError
+            # Limita as arenas do glibc: sem isso cada thread pode reservar uma
+            # arena propria e o RSS sobe devagar sem aparecer no heap.
+            - name: MALLOC_ARENA_MAX
+              value: "2"
           resources:
             requests:
               cpu: 200m
-              memory: 256Mi
+              memory: 512Mi
             limits:
               cpu: 1000m
-              memory: 512Mi
+              memory: 768Mi
+          # O Spring leva ~40s para subir; sem startupProbe a liveness matava o
+          # pod no meio do boot (SIGTERM, exit 143). Ate 3 min para ficar pronto.
+          startupProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 36
           readinessProbe:
             httpGet:
               path: /api/v1/health
               port: 8080
-            initialDelaySeconds: 5
+            periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /api/v1/health
               port: 8080
-            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
