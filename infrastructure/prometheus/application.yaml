@@ -25,14 +25,15 @@ spec:
             limits:
               cpu: 500m
               memory: 256Mi
+          # Os sidecars (k8s-sidecar, Python) usam ~65Mi parados: com 64Mi levavam OOMKilled.
           sidecar:
             resources:
               requests:
                 cpu: 10m
-                memory: 16Mi
+                memory: 64Mi
               limits:
                 cpu: 100m
-                memory: 64Mi
+                memory: 128Mi
           persistence:
             enabled: true
             storageClassName: local-path
