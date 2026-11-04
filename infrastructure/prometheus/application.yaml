@@ -47,6 +47,10 @@ spec:
               memory: 256Mi
           # Os sidecars (k8s-sidecar, Python) usam ~65Mi parados: com 64Mi levavam OOMKilled.
           sidecar:
+            # Alertmanager esta desligado; sem isto o Grafana ganha um datasource quebrado.
+            datasources:
+              alertmanager:
+                enabled: false
             resources:
               requests:
                 cpu: 10m
