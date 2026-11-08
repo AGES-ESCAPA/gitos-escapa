@@ -32,6 +32,8 @@ spec:
         runAsNonRoot: true
         runAsUser: 100
         runAsGroup: 1000
+        # Sem fsGroup os arquivos do Secret ficam root:root e o usuario 100 nao le.
+        fsGroup: 1000
       containers:
         - name: unsealer
           image: hashicorp/vault:1.18.1   # mesma versao do servidor, ja presente no node
@@ -85,6 +87,6 @@ spec:
         - name: keys
           secret:
             secretName: vault-unseal-keys
-            defaultMode: 0400
+            defaultMode: 0440
         - name: tmp
           emptyDir: {}
