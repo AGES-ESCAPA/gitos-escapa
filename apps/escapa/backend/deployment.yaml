@@ -19,7 +19,7 @@ spec:
         - name: ghcr-pull-secret   # criado pelo Terraform (user_data), não pelo Git
       containers:
         - name: backend
-          image: ghcr.io/ages-escapa/escapa-backend:3fd9cd75383f8dea3e8d20b931e407c57f5f5fa1
+          image: ghcr.io/ages-escapa/escapa-backend:c2e278a74fb10958e21756b437c76dbbdbae1209
           ports:
             - containerPort: 8080
           envFrom:
