@@ -1,0 +1,18 @@
+# Coleta as metricas do Spring Actuator (latencia HTTP p95/p99, JVM, HikariCP)
+# para o dashboard "Escapa — Backend e Cluster" no Grafana.
+# O label release=prometheus e o seletor do Prometheus do kube-prometheus-stack.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: escapa-backend
+  labels:
+    app: escapa-backend
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: escapa-backend
+  podMetricsEndpoints:
+    - port: management
+      path: /actuator/prometheus
+      interval: 30s

@@ -21,7 +21,12 @@ spec:
         - name: backend
           image: ghcr.io/ages-escapa/escapa-backend:731fb306efc949d3cda8b939bda2de2e30ec207c
           ports:
-            - containerPort: 8080
+            - name: http
+              containerPort: 8080
+            # Actuator (/actuator/prometheus) em porta separada, fora do Service e
+            # do Ingress; so o Prometheus acessa, via PodMonitor.
+            - name: management
+              containerPort: 8081
           envFrom:
             - secretRef:
                 name: escapa-backend-config
